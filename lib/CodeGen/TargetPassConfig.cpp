@@ -47,6 +47,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <string>
 
@@ -1076,17 +1077,29 @@ static cl::opt<RegisterRegAlloc::FunctionPassCtor, false,
 ///
 /// TODO: We could use a single addPre/Post(ID) hook to allow pass injection
 /// before/after any target-independent pass. But it's currently overkill.
-void TargetPassConfig::addMachinePasses() {
+void TargetPassConfig::addMachinePasses(raw_pwrite_stream &Out) {
   AddingMachinePasses = true;
 
   // Add passes that optimize machine instructions in SSA form.
   if (getOptLevel() != CodeGenOpt::None) {
+    /* work around for STRAIGHT bug
     addMachineSSAOptimization();
+    */
   } else {
     // If the target requests it, assign local variables to stack slots relative
     // to one another and simplify frame index references where possible.
     addPass(&LocalStackSlotAllocationID);
   }
+
+  // ------ for STRAIGHT (SSA CodeGen) ------
+  addPass(&MachineFunctionPrinterPassID);
+  addPhiAndSpillPass();
+  addPass(createPrologEpilogInserterPass());
+  addCodeGenPass(Out);
+
+  return;
+  // ------                            ------
+
 
   if (TM->Options.EnableIPRA)
     addPass(createRegUsageInfoPropPass());
@@ -1153,8 +1166,10 @@ void TargetPassConfig::addMachinePasses() {
   }
 
   // Basic block placement.
+#if 0 // for STRAIGHT
   if (getOptLevel() != CodeGenOpt::None)
     addBlockPlacement();
+#endif
 
   // Insert before XRay Instrumentation.
   addPass(&FEntryInserterID);

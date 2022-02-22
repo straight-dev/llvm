@@ -103,7 +103,7 @@ LLVMTargetMachine::getTargetTransformInfo(const Function &F) {
 static TargetPassConfig *
 addPassesToGenerateCode(LLVMTargetMachine &TM, PassManagerBase &PM,
                         bool DisableVerify,
-                        MachineModuleInfoWrapperPass &MMIWP) {
+                        MachineModuleInfoWrapperPass &MMIWP, raw_pwrite_stream &Out) {
   // Targets may override createPassConfig to provide a target-specific
   // subclass.
   TargetPassConfig *PassConfig = TM.createPassConfig(PM);
@@ -114,7 +114,8 @@ addPassesToGenerateCode(LLVMTargetMachine &TM, PassManagerBase &PM,
 
   if (PassConfig->addISelPasses())
     return nullptr;
-  PassConfig->addMachinePasses();
+  PassConfig->addMachinePasses(Out);
+  //FIXME: addPassesToGenerateCodeにraw_pwrite_streamが渡されなくなったので、上手くいかない
   PassConfig->setInitialized();
   return PassConfig;
 }
@@ -213,18 +214,31 @@ bool LLVMTargetMachine::addPassesToEmitFile(
   if (!MMIWP)
     MMIWP = new MachineModuleInfoWrapperPass(this);
   TargetPassConfig *PassConfig =
-      addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
+      addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP, Out);
   if (!PassConfig)
     return true;
 
+  /*
   if (TargetPassConfig::willCompleteCodeGenPipeline()) {
     if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
       return true;
   } else {
-    // MIR printing is redundant with -filetype=null.
     if (FileType != CGFT_Null)
       PM.add(createPrintMIRPass(Out));
   }
+  */
+  /*
+  if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+    if (FileType != CGFT_Null)
+      PM.add(createPrintMIRPass(Out)); // これが新たに出力を取ってくる用途に使えるかもしれない
+  }
+
+
+  if (TargetPassConfig::willCompleteCodeGenPipeline() && FileType != CGFT_Null) {
+    // MIR printing is redundant with -filetype=null.
+    PM.add(createPrintMIRPass(Out));
+  }
+  */
 
   PM.add(createFreeMachineFunctionPass());
   return false;
@@ -241,7 +255,7 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   // Add common CodeGen passes.
   MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(this);
   TargetPassConfig *PassConfig =
-      addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP);
+      addPassesToGenerateCode(*this, PM, DisableVerify, *MMIWP, Out);
   if (!PassConfig)
     return true;
   assert(TargetPassConfig::willCompleteCodeGenPipeline() &&

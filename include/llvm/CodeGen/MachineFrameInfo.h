@@ -19,6 +19,7 @@
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <vector>
+#include <iostream>
 
 namespace llvm {
 class raw_ostream;

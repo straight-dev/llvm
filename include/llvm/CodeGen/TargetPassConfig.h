@@ -15,6 +15,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <string>
 
@@ -274,7 +275,8 @@ public:
 
   /// Add the complete, standard set of LLVM CodeGen passes.
   /// Fully developed targets will not generally override this.
-  virtual void addMachinePasses();
+  //virtual void addMachinePasses();
+  virtual void addMachinePasses(raw_pwrite_stream&); //FIXME: この方法はうまく行かないらしい
 
   /// Create an instance of ScheduleDAGInstrs to be run within the standard
   /// MachineScheduler pass for this function and target at the current
@@ -335,6 +337,10 @@ public:
   /// uses the fallback path. In other words, it will emit a diagnostic
   /// when GlobalISel failed and isGlobalISelAbortEnabled is false.
   virtual bool reportDiagnosticWhenGlobalISelFallback() const;
+
+  // for Straight
+  virtual void addPhiAndSpillPass() {}
+  virtual void addCodeGenPass(raw_pwrite_stream&) {}
 
   /// Check whether continuous CSE should be enabled in GISel passes.
   /// By default, it's enabled for non O0 levels.

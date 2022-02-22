@@ -904,6 +904,8 @@ void ModuleSlotTracker::incorporateFunction(const Function &F) {
 }
 
 int ModuleSlotTracker::getLocalSlot(const Value *V) {
+  if (!F)
+    return -99;
   assert(F && "No function incorporated");
   return Machine->getLocalSlot(V);
 }
